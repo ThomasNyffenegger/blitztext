@@ -55,3 +55,25 @@ def test_transcribe_passes_language_and_model(audio_file):
     kwargs = mock_client.audio.transcriptions.create.call_args.kwargs
     assert kwargs["model"] == "whisper-1"
     assert kwargs["language"] == "de"
+
+
+def test_transcribe_handles_missing_audio_file(tmp_path):
+    # File that doesn't exist — remove should not raise
+    p = tmp_path / "audio.wav"
+    p.write_bytes(b"RIFF data")
+    audio_path = str(p)
+
+    mock_response = MagicMock()
+    mock_response.text = "Text"
+    with patch("transcriber.OpenAI") as MockOpenAI:
+        mock_client = MockOpenAI.return_value
+        mock_client.audio.transcriptions.create.return_value = mock_response
+        # Patch os.remove to raise FileNotFoundError
+        with patch("transcriber.os.remove", side_effect=FileNotFoundError):
+            from transcriber import transcribe
+            result = transcribe(audio_path, {
+                "openai_api_key": "sk-test",
+                "whisper_model": "whisper-1",
+                "whisper_language": "de",
+            })
+    assert result == "Text"  # Should not raise, should return text

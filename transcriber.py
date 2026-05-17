@@ -10,5 +10,8 @@ def transcribe(audio_path: str, config: dict) -> str:
             file=f,
             language=config.get("whisper_language", "de"),
         )
-    os.remove(audio_path)
+    try:
+        os.remove(audio_path)
+    except OSError:
+        pass
     return result.text
