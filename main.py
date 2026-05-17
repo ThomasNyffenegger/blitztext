@@ -19,6 +19,7 @@ class BlitzText:
         self._config = load_config()
         self._recorder = AudioRecorder()
         self._active_mode: str | None = None
+        self._mode_lock = threading.Lock()
 
         self._root = tk.Tk()
         self._root.withdraw()
@@ -40,22 +41,25 @@ class BlitzText:
         self._root.destroy()
 
     def _start_mode(self, mode: str) -> None:
-        if self._active_mode:
-            return
+        with self._mode_lock:
+            if self._active_mode:
+                return
+            self._active_mode = mode
         labels = {"transcribe": "🎙️ Transkription", "mail": "🎙️ Mail-Modus", "rage": "🎙️ Rage-Modus"}
-        self._active_mode = mode
         try:
             self._recorder.start()
         except Exception:
+            with self._mode_lock:
+                self._active_mode = None
             self._overlay.show("❌ Kein Mikrofon gefunden")
-            self._active_mode = None
             return
         self._overlay.show(f"{labels[mode]}...", persistent=True)
 
     def _stop_mode(self, mode: str) -> None:
-        if self._active_mode != mode:
-            return
-        self._active_mode = None
+        with self._mode_lock:
+            if self._active_mode != mode:
+                return
+            self._active_mode = None
         self._overlay.update_message("⏳ Wird verarbeitet...")
         threading.Thread(target=self._process, args=(mode,), daemon=True).start()
 
@@ -96,9 +100,16 @@ class BlitzText:
         self._overlay.show("✓ Fertig", duration=2.0)
 
     def _hotkey_listener(self) -> None:
-        hotkeys = self._config["hotkeys"]
-        state: dict[str, bool] = {mode: False for mode in hotkeys}
+        state: dict[str, bool] = {}
         while True:
+            hotkeys = self._config["hotkeys"]
+            # Reset state for new/removed hotkeys
+            for mode in list(state):
+                if mode not in hotkeys:
+                    del state[mode]
+            for mode in hotkeys:
+                if mode not in state:
+                    state[mode] = False
             for mode, hotkey in hotkeys.items():
                 pressed = keyboard.is_pressed(hotkey)
                 if pressed and not state[mode]:
