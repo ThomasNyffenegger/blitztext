@@ -1,0 +1,10 @@
+config.json
+temp_audio.wav
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
