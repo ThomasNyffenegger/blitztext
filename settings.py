@@ -21,14 +21,22 @@ def load_config() -> dict:
     config = DEFAULT_CONFIG.copy()
     config["hotkeys"] = DEFAULT_CONFIG["hotkeys"].copy()
     if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            saved = json.load(f)
-        config.update({k: v for k, v in saved.items() if k != "hotkeys"})
-        if "hotkeys" in saved:
-            config["hotkeys"].update(saved["hotkeys"])
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            config.update({k: v for k, v in saved.items() if k != "hotkeys"})
+            if "hotkeys" in saved:
+                config["hotkeys"].update(saved["hotkeys"])
+        except (json.JSONDecodeError, OSError):
+            # Corrupted or unreadable config file; return defaults
+            pass
     return config
 
 
 def save_config(config: dict) -> None:
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+    except OSError:
+        # Unable to write config file; silently ignore
+        pass

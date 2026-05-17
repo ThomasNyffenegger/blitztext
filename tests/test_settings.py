@@ -37,3 +37,18 @@ def test_load_config_merges_missing_keys(tmp_path):
         config = load_config()
     assert config["openai_api_key"] == "existing-key"
     assert config["whisper_language"] == "de"  # default filled in
+
+
+def test_load_config_returns_defaults_on_corrupted_file(tmp_path):
+    config_file = str(tmp_path / "config.json")
+    # Write corrupted JSON
+    with open(config_file, "w") as f:
+        f.write("{invalid json content")
+    with patch("settings.CONFIG_PATH", config_file):
+        from settings import load_config
+        config = load_config()
+    # Should return defaults gracefully
+    assert config["whisper_language"] == "de"
+    assert config["whisper_model"] == "whisper-1"
+    assert config["autostart"] is False
+    assert config["hotkeys"]["transcribe"] == "ctrl+alt+space"
