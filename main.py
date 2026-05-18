@@ -52,7 +52,7 @@ class BlitzText:
                 self._active_mode = None
             self._overlay.show("❌ Kein Mikrofon gefunden")
             return
-        self._overlay.show(f"{labels[mode]}...", persistent=True)
+        self._overlay.show(f"{labels[mode]} – Halten & sprechen...", persistent=True)
 
     def _stop_mode(self, mode: str) -> None:
         with self._mode_lock:
