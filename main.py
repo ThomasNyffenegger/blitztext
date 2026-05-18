@@ -133,5 +133,11 @@ class BlitzText:
 
 
 if __name__ == "__main__":
-    app = BlitzText()
-    app.run()
+    import sys
+    import traceback
+    try:
+        app = BlitzText()
+        app.run()
+    except Exception:
+        traceback.print_exc()
+        input("Fehler — Enter zum Beenden")

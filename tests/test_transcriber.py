@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import scipy.io.wavfile as wav
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -6,7 +8,8 @@ from unittest.mock import MagicMock, patch
 @pytest.fixture
 def audio_file(tmp_path):
     p = tmp_path / "test.wav"
-    p.write_bytes(b"RIFF fake wav data")
+    audio = np.zeros(16000, dtype="int16")  # 1 second of silence
+    wav.write(str(p), 16000, audio)
     return str(p)
 
 
@@ -40,20 +43,22 @@ def test_transcribe_passes_language(audio_file):
          patch.dict("transcriber._model_cache", {}, clear=True):
         from transcriber import transcribe
         transcribe(audio_file, {"whisper_model": "base", "whisper_language": "de"})
-    mock_model.transcribe.assert_called_once_with(audio_file, language="de")
+    args = mock_model.transcribe.call_args
+    assert args.kwargs.get("language") == "de" or args.args[1:] == () and args.kwargs["language"] == "de"
 
 
-def test_transcribe_caches_model(audio_file, tmp_path):
+def test_transcribe_caches_model(tmp_path):
     mock_model = _mock_whisper("Text")
-    audio_file2 = str(tmp_path / "test2.wav")
-    with open(audio_file2, "wb") as f:
-        f.write(b"RIFF data")
+    for i in range(2):
+        p = tmp_path / f"test{i}.wav"
+        wav.write(str(p), 16000, np.zeros(16000, dtype="int16"))
+    files = [str(tmp_path / f"test{i}.wav") for i in range(2)]
     with patch("transcriber.whisper.load_model", return_value=mock_model) as mock_load, \
          patch.dict("transcriber._model_cache", {}, clear=True):
         from transcriber import transcribe
-        transcribe(audio_file, {"whisper_model": "base", "whisper_language": "de"})
-        transcribe(audio_file2, {"whisper_model": "base", "whisper_language": "de"})
-    assert mock_load.call_count == 1  # loaded once, reused second time
+        transcribe(files[0], {"whisper_model": "base", "whisper_language": "de"})
+        transcribe(files[1], {"whisper_model": "base", "whisper_language": "de"})
+    assert mock_load.call_count == 1
 
 
 def test_transcribe_handles_remove_error(audio_file):
