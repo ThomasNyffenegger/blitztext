@@ -77,6 +77,9 @@ class BlitzText:
         except Exception as e:
             self._overlay.show(f"❌ Fehler: {type(e).__name__}")
             return
+        if not text.strip():
+            self._overlay.show("❌ Nichts erkannt – länger sprechen")
+            return
 
         if mode in ("mail", "rage"):
             anthropic_key = self._config.get("anthropic_api_key", "")

@@ -24,7 +24,8 @@ def test_recorder_start_opens_stream():
 def test_recorder_stop_returns_wav_path(tmp_path):
     from recorder import AudioRecorder
     with patch("recorder.sd.InputStream") as MockStream, \
-         patch("recorder.os.path.dirname", return_value=str(tmp_path)):
+         patch("recorder.os.path.dirname", return_value=str(tmp_path)), \
+         patch("recorder.time.monotonic", side_effect=[0.0, 1.0]):
         mock_stream = MagicMock()
         MockStream.return_value = mock_stream
         rec = AudioRecorder()

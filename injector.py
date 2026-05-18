@@ -1,6 +1,6 @@
 import time
 import pyperclip
-import pyautogui
+import keyboard
 
 
 def inject_text(text: str) -> None:
@@ -10,7 +10,7 @@ def inject_text(text: str) -> None:
         original = ""
 
     pyperclip.copy(text)
-    time.sleep(0.1)
-    pyautogui.hotkey("ctrl", "v")
-    time.sleep(0.1)
+    time.sleep(0.15)
+    keyboard.send("ctrl+v")
+    time.sleep(0.15)
     pyperclip.copy(original)
