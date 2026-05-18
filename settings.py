@@ -8,7 +8,7 @@ CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.j
 DEFAULT_CONFIG = {
     "openai_api_key": "",
     "anthropic_api_key": "",
-    "whisper_model": "whisper-1",
+    "whisper_model": "base",
     "whisper_language": "de",
     "autostart": False,
     "hotkeys": {

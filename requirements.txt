@@ -1,4 +1,4 @@
-openai>=1.30.0
+openai-whisper>=20230314
 anthropic>=0.25.0
 sounddevice>=0.4.6
 scipy>=1.11.0

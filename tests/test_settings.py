@@ -9,7 +9,7 @@ def test_load_config_creates_defaults_when_no_file(tmp_path):
         from settings import load_config
         config = load_config()
     assert config["whisper_language"] == "de"
-    assert config["whisper_model"] == "whisper-1"
+    assert config["whisper_model"] == "base"
     assert config["autostart"] is False
     assert config["hotkeys"]["transcribe"] == "ctrl+alt+space"
     assert config["hotkeys"]["mail"] == "ctrl+alt+m"
@@ -49,6 +49,6 @@ def test_load_config_returns_defaults_on_corrupted_file(tmp_path):
         config = load_config()
     # Should return defaults gracefully
     assert config["whisper_language"] == "de"
-    assert config["whisper_model"] == "whisper-1"
+    assert config["whisper_model"] == "base"
     assert config["autostart"] is False
     assert config["hotkeys"]["transcribe"] == "ctrl+alt+space"
