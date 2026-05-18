@@ -1,4 +1,3 @@
-import sys
 import threading
 import time
 import tkinter as tk
@@ -7,7 +6,7 @@ import keyboard
 
 from overlay import Overlay
 from recorder import AudioRecorder
-from settings import load_config, save_config, SettingsWindow
+from settings import load_config, SettingsWindow
 from tray import TrayApp
 import transcriber
 import processor
@@ -60,7 +59,11 @@ class BlitzText:
             if self._active_mode != mode:
                 return
             self._active_mode = None
-        self._overlay.update_message("⏳ Wird verarbeitet...")
+        model_name = self._config.get("whisper_model", "base")
+        if transcriber.is_model_loaded(model_name):
+            self._overlay.update_message("⏳ Wird transkribiert...")
+        else:
+            self._overlay.update_message("⏳ Modell wird geladen (einmalig)...")
         threading.Thread(target=self._process, args=(mode,), daemon=True).start()
 
     def _process(self, mode: str) -> None:
@@ -69,16 +72,10 @@ class BlitzText:
             self._overlay.show("❌ Keine Aufnahme")
             return
 
-        openai_key = self._config.get("openai_api_key", "")
-        if not openai_key:
-            self._overlay.hide()
-            self._root.after(0, self._settings_window.open)
-            return
-
         try:
             text = transcriber.transcribe(audio_path, self._config)
-        except Exception:
-            self._overlay.show("❌ Fehler: API nicht erreichbar")
+        except Exception as e:
+            self._overlay.show(f"❌ Fehler: {type(e).__name__}")
             return
 
         if mode in ("mail", "rage"):
@@ -87,6 +84,7 @@ class BlitzText:
                 self._overlay.hide()
                 self._root.after(0, self._settings_window.open)
                 return
+            self._overlay.update_message("⏳ Claude formuliert um...")
             try:
                 if mode == "mail":
                     text = processor.process_mail(text, self._config)
@@ -103,7 +101,6 @@ class BlitzText:
         state: dict[str, bool] = {}
         while True:
             hotkeys = self._config["hotkeys"]
-            # Reset state for new/removed hotkeys
             for mode in list(state):
                 if mode not in hotkeys:
                     del state[mode]
@@ -120,8 +117,13 @@ class BlitzText:
                     threading.Thread(target=self._stop_mode, args=(mode,), daemon=True).start()
             time.sleep(0.05)
 
+    def _preload_model(self) -> None:
+        model_name = self._config.get("whisper_model", "base")
+        transcriber.preload_model(model_name)
+
     def run(self) -> None:
         self._tray.run()
+        threading.Thread(target=self._preload_model, daemon=True).start()
         hotkey_thread = threading.Thread(target=self._hotkey_listener, daemon=True)
         hotkey_thread.start()
         self._root.mainloop()
