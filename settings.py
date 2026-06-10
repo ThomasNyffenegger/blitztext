@@ -1,14 +1,36 @@
 import json
 import os
+import sys
+import winreg
 import tkinter as tk
 from tkinter import ttk
+
+_AUTOSTART_KEY = "Blitztext"
+_AUTOSTART_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+
+def set_autostart(enabled: bool) -> None:
+    exe = sys.executable
+    script = os.path.abspath(os.path.join(os.path.dirname(__file__), "main.py"))
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, _AUTOSTART_PATH, access=winreg.KEY_SET_VALUE)
+        if enabled:
+            winreg.SetValueEx(key, _AUTOSTART_KEY, 0, winreg.REG_SZ, f'"{exe}" "{script}"')
+        else:
+            try:
+                winreg.DeleteValue(key, _AUTOSTART_KEY)
+            except FileNotFoundError:
+                pass
+        winreg.CloseKey(key)
+    except OSError:
+        pass
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
 DEFAULT_CONFIG = {
     "openai_api_key": "",
     "anthropic_api_key": "",
-    "whisper_model": "base",
+    "whisper_model": "small",
     "whisper_language": "de",
     "autostart": False,
     "hotkeys": {
@@ -121,5 +143,6 @@ class SettingsWindow:
             self._config["hotkeys"][key] = var.get()
         self._config["autostart"] = self._autostart_var.get()
         save_config(self._config)
+        set_autostart(self._config["autostart"])
         self._on_save(self._config)
         self._window.destroy()

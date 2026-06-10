@@ -6,8 +6,9 @@ Systemweites Sprach-Diktat per Hotkey in jede beliebige Anwendung.
 
 - Python 3.11+
 - Mikrofon
-- OpenAI API Key (für Transkription via Whisper)
-- Anthropic API Key (für Mail- und Rage-Modus, optional)
+- Anthropic API Key (optional, nur für Mail- und Rage-Modus)
+
+Transkription läuft lokal via [openai-whisper](https://github.com/openai/whisper) — kein API-Key nötig. Beim ersten Start wird das Whisper-Modell (`small`, ~460MB) automatisch heruntergeladen.
 
 ## Installation
 
@@ -15,51 +16,60 @@ Systemweites Sprach-Diktat per Hotkey in jede beliebige Anwendung.
 pip install -r requirements.txt
 ```
 
+Oder auf einem neuen PC: `install.bat` doppelklicken.
+
 ## Starten
 
-> **Wichtig:** Für globale Hotkeys (auch wenn ein anderes Fenster im Fokus ist) muss die App mit **Administratorrechten** gestartet werden.
+> **Wichtig:** Für globale Hotkeys muss die App mit **Administratorrechten** gestartet werden.
 
 Rechtsklick auf `main.py` → "Als Administrator ausführen", oder:
 
-```bash
+```powershell
 # In einer Admin-PowerShell:
 python main.py
 ```
-
-Beim ersten Start öffnet sich automatisch das Einstellungsfenster.
 
 ## Bedienung
 
 | Hotkey | Funktion |
 |--------|----------|
-| `Ctrl+Alt+Space` | Transkription (unverändert) |
-| `Ctrl+Alt+M` | Mail-Modus (via Claude umformuliert) |
-| `Ctrl+Alt+R` | Rage-Modus (humorvoll-sarkastisch via Claude) |
+| `Ctrl+Shift+Y` | Transkription (Text unverändert einfügen) |
+| `Ctrl+Alt+M` | Mail-Modus (Claude formuliert als professionelle E-Mail um) |
+| `Ctrl+Alt+R` | Rage-Modus (Claude macht aus Frust einen humorvollen Text) |
 
-Hotkey **gedrückt halten** → sprechen → **loslassen** → Text wird eingefügt.
+Hotkey **gedrückt halten** → sprechen → **loslassen** → Text erscheint an der Cursor-Position.
+
+Hotkeys sind in den Einstellungen frei konfigurierbar.
 
 ## Einstellungen
 
 Rechtsklick auf das Tray-Icon → **Einstellungen**
 
-- OpenAI API Key (Whisper)
-- Anthropic API Key (Claude, für Mail- und Rage-Modus)
+- Anthropic API Key (für Mail- und Rage-Modus)
+- Whisper Modell (`tiny` / `base` / `small` / `medium`) und Sprache
 - Hotkeys anpassen
-- Whisper Sprache und Modell
 - Autostart mit Windows
+
+## Installation auf einem weiteren PC
+
+1. Python 3.11+ installieren (python.org)
+2. Diesen Ordner kopieren
+3. `install.bat` doppelklicken
+4. `python main.py` als Administrator starten
 
 ## Projektstruktur
 
 ```
 blitztext/
-├── main.py          # Einstiegspunkt
-├── recorder.py      # Audioaufnahme
-├── transcriber.py   # Whisper API
-├── processor.py     # Claude API (Mail + Rage)
-├── injector.py      # Text einfügen via Clipboard
-├── overlay.py       # Feedback-Overlay
-├── tray.py          # System Tray
-├── settings.py      # Einstellungen UI + config.json
+├── main.py          # Einstiegspunkt, Hotkey-Listener, Threading
+├── recorder.py      # Audioaufnahme (sounddevice)
+├── transcriber.py   # Transkription (openai-whisper, lokal)
+├── processor.py     # Textverarbeitung (Claude API, Mail + Rage)
+├── injector.py      # Text einfügen via Clipboard + Ctrl+V
+├── overlay.py       # Feedback-Overlay (tkinter)
+├── tray.py          # System Tray Icon + Menü
+├── settings.py      # Einstellungen UI, config.json, Autostart
 ├── config.json      # Wird beim ersten Start erstellt
+├── install.bat      # Einmalige Installation der Abhängigkeiten
 └── requirements.txt
 ```

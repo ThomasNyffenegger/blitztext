@@ -6,7 +6,7 @@ import keyboard
 
 from overlay import Overlay
 from recorder import AudioRecorder
-from settings import load_config, SettingsWindow
+from settings import load_config, set_autostart, SettingsWindow
 from tray import TrayApp
 import transcriber
 import processor
@@ -16,6 +16,7 @@ import injector
 class BlitzText:
     def __init__(self):
         self._config = load_config()
+        set_autostart(self._config.get("autostart", False))
         self._recorder = AudioRecorder()
         self._active_mode: str | None = None
         self._mode_lock = threading.Lock()
