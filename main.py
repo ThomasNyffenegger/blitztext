@@ -9,8 +9,8 @@ from recorder import AudioRecorder
 from settings import load_config, set_autostart, SettingsWindow
 from tray import TrayApp
 import transcriber
-import processor
 import injector
+import modes
 
 
 class BlitzText:
@@ -45,7 +45,6 @@ class BlitzText:
             if self._active_mode:
                 return
             self._active_mode = mode
-        labels = {"transcribe": "🎙️ Transkription", "mail": "🎙️ Mail-Modus", "rage": "🎙️ Rage-Modus"}
         try:
             self._recorder.start()
         except Exception:
@@ -53,7 +52,7 @@ class BlitzText:
                 self._active_mode = None
             self._overlay.show("❌ Kein Mikrofon gefunden")
             return
-        self._overlay.show(f"{labels[mode]} – Halten & sprechen...", persistent=True)
+        self._overlay.show(f"{modes.mode_label(mode)} – Halten & sprechen...", persistent=True)
 
     def _stop_mode(self, mode: str) -> None:
         with self._mode_lock:
@@ -74,7 +73,9 @@ class BlitzText:
             return
 
         try:
-            text = transcriber.transcribe(audio_path, self._config)
+            text = transcriber.transcribe(
+                audio_path, self._config, task=modes.whisper_task_for(mode)
+            )
         except Exception as e:
             self._overlay.show(f"❌ Fehler: {type(e).__name__}")
             return
@@ -82,7 +83,7 @@ class BlitzText:
             self._overlay.show("❌ Nichts erkannt – länger sprechen")
             return
 
-        if mode in ("mail", "rage"):
+        if modes.needs_claude(mode):
             anthropic_key = self._config.get("anthropic_api_key", "")
             if not anthropic_key:
                 self._overlay.hide()
@@ -90,10 +91,7 @@ class BlitzText:
                 return
             self._overlay.update_message("⏳ Claude formuliert um...")
             try:
-                if mode == "mail":
-                    text = processor.process_mail(text, self._config)
-                else:
-                    text = processor.process_rage(text, self._config)
+                text = modes.apply_claude(mode, text, self._config)
             except Exception:
                 self._overlay.show("❌ Fehler: Claude API nicht erreichbar")
                 return

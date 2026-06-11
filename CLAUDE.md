@@ -1,11 +1,11 @@
 # Blitztext für Windows – Projektkontext
 
 ## Was ist das?
-Blitztext ist eine Windows-Desktop-App, die systemweites Sprach-Diktat per Hotkey in jede beliebige Anwendung ermöglicht. Inspiriert von einer Mac-App des deutschen YouTubers Christoph Magnussen. Transkription via lokalem openai-whisper, Textverarbeitung via Anthropic Claude API.
+Blitztext ist eine Windows-Desktop-App, die systemweites Sprach-Diktat per Hotkey in jede beliebige Anwendung ermöglicht. Inspiriert von einer Mac-App des deutschen YouTubers Christoph Magnussen. Transkription via lokalem faster-whisper (CTranslate2), Textverarbeitung via Anthropic Claude API.
 
 ## Wichtigste Designentscheidungen
 - **Kein GUI-Hauptfenster** – die App lebt im System Tray
-- **Transkription lokal** via `openai-whisper` (kein OpenAI API Key nötig, kein Internet für Diktat)
+- **Transkription lokal** via `faster-whisper` (CTranslate2, int8 auf CPU, ~2,3× schneller als openai-whisper; kein API Key nötig, kein Internet fürs Diktat nach Modell-Download)
 - **Text-Einfügen via Clipboard** (`ctypes.windll.user32.keybd_event` simuliert Ctrl+V) – zuverlässiger als pyautogui bei Sonderzeichen und Umlauten
 - **Clipboard-Verifikationsschleife** vor dem Einfügen: wartet bis pyperclip.paste() == text (bis 1s), um Kaspersky-bedingte Clipboard-Verzögerungen abzufangen
 - **Zwischenablage wiederherstellen** nach dem Einfügen
@@ -31,8 +31,9 @@ Blitztext ist eine Windows-Desktop-App, die systemweites Sprach-Diktat per Hotke
 ```
 blitztext/
 ├── main.py          # Einstiegspunkt, Hotkey-Listener, Threading
+├── modes.py         # Reine Modus-Routing-Logik (Whisper-Task, Claude-Routing)
 ├── recorder.py      # Audioaufnahme (sounddevice, 16kHz, int16)
-├── transcriber.py   # Transkription (openai-whisper, lokal, scipy WAV-Loading)
+├── transcriber.py   # Transkription + Übersetzung (openai-whisper, lokal, scipy WAV-Loading)
 ├── processor.py     # Textverarbeitung (Claude API, Mail + Rage)
 ├── injector.py      # Text einfügen via Clipboard + ctypes Ctrl+V
 ├── overlay.py       # Feedback-Overlay (tkinter)
@@ -41,7 +42,7 @@ blitztext/
 ├── config.json      # Wird beim ersten Start erstellt
 ├── install.bat      # Einmalige Installation der Abhängigkeiten
 ├── requirements.txt
-└── tests/           # pytest-Testsuite (19 Tests)
+└── tests/           # pytest-Testsuite (41 Tests)
 ```
 
 ## config.json Struktur (Standardwerte)
@@ -53,6 +54,7 @@ blitztext/
   "autostart": false,
   "hotkeys": {
     "transcribe": "ctrl+shift+y",
+    "translate": "ctrl+shift+e",
     "mail": "ctrl+alt+m",
     "rage": "ctrl+alt+r"
   }
@@ -61,6 +63,8 @@ blitztext/
 
 ## Bekannte Eigenheiten
 - **Kaspersky** verzögert Clipboard-Zugriffe um bis zu ~500ms → Verifikationsschleife in `injector.py` fängt das ab
-- **PyTorch CUDA** nicht nutzbar auf Python 3.14 (keine Wheels verfügbar) → CPU-Inferenz, ~3s für kurze Diktate mit `small`-Modell
-- **scipy** wird zum WAV-Laden verwendet (nicht ffmpeg), um eine externe Abhängigkeit zu vermeiden
+- **faster-whisper statt openai-whisper** – CTranslate2-Backend, int8-Quantisierung, ~2,3× schneller auf CPU bei gleicher Genauigkeit. Modelle kommen vom HuggingFace Hub (`Systran/faster-whisper-*`), Cache unter `~/.cache/huggingface/hub`
+- **GPU (CUDA)** bringt auf der vorhandenen GTX 960M nichts (zu schwach); zudem keine PyTorch-CUDA-Wheels für Python 3.14 → CPU-Inferenz
+- **Modell-Download** im Einstellungs-UI: Prozent-Fortschritt + Abbruch via `snapshot_download(tqdm_class=...)` mit abbrechbarer tqdm-Subklasse
+- **scipy** wird zum WAV-Laden verwendet (nicht ffmpeg), um eine externe Abhängigkeit zu vermeiden; faster-whisper bekommt das float32-Array direkt
 - `openai_api_key` im Einstellungs-UI nicht mehr vorhanden, da Transkription lokal läuft

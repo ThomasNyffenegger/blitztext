@@ -1,6 +1,6 @@
 import json
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
 def test_load_config_creates_defaults_when_no_file(tmp_path):
@@ -11,7 +11,7 @@ def test_load_config_creates_defaults_when_no_file(tmp_path):
     assert config["whisper_language"] == "de"
     assert config["whisper_model"] == "small"
     assert config["autostart"] is False
-    assert config["hotkeys"]["transcribe"] == "ctrl+alt+space"
+    assert config["hotkeys"]["transcribe"] == "ctrl+shift+y"
     assert config["hotkeys"]["mail"] == "ctrl+alt+m"
     assert config["hotkeys"]["rage"] == "ctrl+alt+r"
 
@@ -51,4 +51,45 @@ def test_load_config_returns_defaults_on_corrupted_file(tmp_path):
     assert config["whisper_language"] == "de"
     assert config["whisper_model"] == "small"
     assert config["autostart"] is False
-    assert config["hotkeys"]["transcribe"] == "ctrl+alt+space"
+    assert config["hotkeys"]["transcribe"] == "ctrl+shift+y"
+
+
+def test_set_autostart_enabled_writes_registry_value():
+    fake_key = MagicMock()
+    with patch("settings.winreg.OpenKey", return_value=fake_key), \
+         patch("settings.winreg.SetValueEx") as set_value, \
+         patch("settings.winreg.DeleteValue") as delete_value, \
+         patch("settings.winreg.CloseKey"):
+        from settings import set_autostart
+        set_autostart(True)
+    assert set_value.called
+    assert set_value.call_args.args[1] == "Blitztext"
+    assert not delete_value.called
+
+
+def test_set_autostart_disabled_deletes_registry_value():
+    fake_key = MagicMock()
+    with patch("settings.winreg.OpenKey", return_value=fake_key), \
+         patch("settings.winreg.SetValueEx") as set_value, \
+         patch("settings.winreg.DeleteValue") as delete_value, \
+         patch("settings.winreg.CloseKey"):
+        from settings import set_autostart
+        set_autostart(False)
+    assert delete_value.called
+    assert delete_value.call_args.args[1] == "Blitztext"
+    assert not set_value.called
+
+
+def test_set_autostart_disabled_ignores_missing_value():
+    fake_key = MagicMock()
+    with patch("settings.winreg.OpenKey", return_value=fake_key), \
+         patch("settings.winreg.DeleteValue", side_effect=FileNotFoundError), \
+         patch("settings.winreg.CloseKey"):
+        from settings import set_autostart
+        set_autostart(False)  # must not raise
+
+
+def test_set_autostart_handles_registry_error():
+    with patch("settings.winreg.OpenKey", side_effect=OSError):
+        from settings import set_autostart
+        set_autostart(True)  # must not raise

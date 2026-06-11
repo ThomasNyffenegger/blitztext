@@ -8,7 +8,7 @@ Systemweites Sprach-Diktat per Hotkey in jede beliebige Anwendung.
 - Mikrofon
 - Anthropic API Key (optional, nur für Mail- und Rage-Modus)
 
-Transkription läuft lokal via [openai-whisper](https://github.com/openai/whisper) — kein API-Key nötig. Beim ersten Start wird das Whisper-Modell (`small`, ~460MB) automatisch heruntergeladen.
+Transkription läuft lokal via [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — kein API-Key nötig, offline nach dem einmaligen Modell-Download. Beim ersten Start wird das Whisper-Modell (`small`, ~480MB) automatisch vom HuggingFace Hub geladen. faster-whisper ist auf der CPU rund 2× schneller als openai-whisper bei gleicher Genauigkeit.
 
 ## Installation
 
@@ -34,6 +34,7 @@ python main.py
 | Hotkey | Funktion |
 |--------|----------|
 | `Ctrl+Shift+Y` | Transkription (Text unverändert einfügen) |
+| `Ctrl+Shift+E` | Übersetzung → Englisch (Deutsch sprechen, Englisch einfügen) |
 | `Ctrl+Alt+M` | Mail-Modus (Claude formuliert als professionelle E-Mail um) |
 | `Ctrl+Alt+R` | Rage-Modus (Claude macht aus Frust einen humorvollen Text) |
 
@@ -62,8 +63,9 @@ Rechtsklick auf das Tray-Icon → **Einstellungen**
 ```
 blitztext/
 ├── main.py          # Einstiegspunkt, Hotkey-Listener, Threading
+├── modes.py         # Modus-Routing (Transkription/Übersetzung/Mail/Rage)
 ├── recorder.py      # Audioaufnahme (sounddevice)
-├── transcriber.py   # Transkription (openai-whisper, lokal)
+├── transcriber.py   # Transkription + Übersetzung (faster-whisper, lokal)
 ├── processor.py     # Textverarbeitung (Claude API, Mail + Rage)
 ├── injector.py      # Text einfügen via Clipboard + Ctrl+V
 ├── overlay.py       # Feedback-Overlay (tkinter)
@@ -71,5 +73,10 @@ blitztext/
 ├── settings.py      # Einstellungen UI, config.json, Autostart
 ├── config.json      # Wird beim ersten Start erstellt
 ├── install.bat      # Einmalige Installation der Abhängigkeiten
+├── benchmark_rtf.py # Misst Whisper-Geschwindigkeit (Real-Time-Factor)
 └── requirements.txt
 ```
+
+## Geplant / Untersucht
+
+- **Live-Transkription während des Sprechens** – untersucht, auf dem Entwicklungs-Laptop nicht machbar (CPU zu langsam für Echtzeit). Auf schnellerer Hardware erneut prüfen mit `python benchmark_rtf.py`. Details: [docs/streaming-investigation.md](docs/streaming-investigation.md).
